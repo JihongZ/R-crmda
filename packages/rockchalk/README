@@ -1,0 +1,31 @@
+Paul E. Johnson <pauljohn@ku.edu>
+2013-04-01
+
+The development work on the rockchalk package
+was moved to a separate GIT repository.
+
+https://github.com/pauljohn32/rockchalk
+
+Snapshot copies of the package are available on our test server
+
+http://rweb.quant.ku.edu/kran
+
+This package has no C code, so it should not be necessary
+for us to build Windows "binary" versions in order for you
+to test it out.  On Windows, please try
+
+> install.packages("rockchalk", repos="http://rweb.quant.ku.edu/kran", type = "source")
+
+I believe that should also work on Macintosh.
+
+
+The vignettes are copied here for easy user access:
+
+
+http://pj.freefaculty.org/R/rockchalk.pdf
+
+http://pj.freefaculty.org/R/Rstyle.pdf
+
+http://pj.freefaculty.org/R/Rchaeology.pdf
+
+
