@@ -254,7 +254,9 @@ genMLMData <- function(M = 100, Nmin = 20, Nvar = 5,
     class(reffects) <- "ranef.mer"
     invisible(list(dat = dat,
                    reffects = reffects, call = cl,
-                   true = list(beta = beta, Xmeans = Xmeans, Xsds = Xsds, Xcorr = Xcorr, STDEE = STDEE, STDEb = STDEb, bcorr = bcorr )))
+                   true = list(beta = beta, Xmeans = Xmeans,
+                   Xsds = Xsds, Xcorr = Xcorr, STDEE = STDEE,
+                   STDEb = STDEb, bcorr = bcorr )))
 }
 
 
@@ -317,10 +319,15 @@ Mrdiag <- function(RE, data, id = "Midx", col = rainbow(nrow(RE))){
     par(mfrow = c( RE.ncol - 1, 2)) ##ignore intercept
 
     for (i in 2:RE.ncol){
-        plot(RE[, 1], RE[ , REnam[i]], xlab = paste("Random Effect on: ", id), ylab = paste("Random Effect on: ", REnam[i], sep=""),  main = "True Random Effects", col = col)
+        plot(RE[, 1], RE[ , REnam[i]], xlab = paste("Random Effect on: ", id),
+             ylab = paste("Random Effect on: ", REnam[i], sep=""),
+             main = "True Random Effects", col = col)
 
 
-        plot(RE[ , 1][dat$Midx], data[ , REnam[i]] * RE[ , REnam[i]][data[, id]], col = col[data[ ,id]], main = "Marginal Random Effects", xlab = paste("Random Effect on: ", id), ylab = paste("Marginal Slope Random Effect (b*", REnam[i], ")", sep=""))
+        plot(RE[ , 1][dat$Midx], data[ , REnam[i]] * RE[ , REnam[i]][data[, id]],
+             col = col[data[ ,id]], main = "Marginal Random Effects",
+             xlab = paste("Random Effect on: ", id),
+             ylab = paste("Marginal Slope Random Effect (b*", REnam[i], ")", sep=""))
     }
     par(par.orig)
     require(rockchalk)
@@ -481,20 +488,6 @@ Mrdiag(gd$reffects[[1]], data=gd$dat)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## bcorr <- vec2sm(c(0.99,0,0,0,0, 0))
 ## diag(bcorr) <- 1
 ## ##leave more defaults at work
@@ -582,13 +575,14 @@ mm3reStdDev <- c(lapply(mm3VarCorr, attr, "stddev"), list(Residual = attr(mm3Var
 mm3reStdDev
 
 
-mm3reStdDev[["Midx"]]["(Intercept)"] - STDEb0
+mm3reStdDev[["Midx"]]["(Intercept)"] - STDEb[1]
 ##mm3reStdDev[["Midx"]]["x1"] - STDEb1
 ## Can't figure how to get STD(b1)
 mm3reStdDev[["Residual"]] - STDEE
 
 ## The "right" model allows the random effects to be correlated (Supposing
 ## bcorr not 0).
+
 mm4 <- lmer( y3 ~ x1 + x2 + x3 + (x1 | Midx), data=dat)
 summary(mm4)
 mm4VarCorr <- VarCorr(mm4)
@@ -610,10 +604,11 @@ mm4ranef <- ranef(mm4, postVar = TRUE) ## a ranef.mer object,  a list that inclu
 apply(mm4ranef[["Midx"]], 2, mean)
 apply(mm4ranef[["Midx"]], 2, sd)
 #summarize(mm4ranef$Midx)
-summary(mm4raner$Midx)
+summary(mm4ranef$Midx)
 cor(mm4ranef$Midx)
 
 dotplot(mm4ranef)
+
 
 m3newdat$mm4pred <- predict(mm4, newdata = m3newdat)
 
