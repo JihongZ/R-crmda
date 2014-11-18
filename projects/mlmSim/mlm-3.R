@@ -305,7 +305,7 @@ spaghettiPlot.lmList <- function(regs, data, iv, cluster = "Midx", col
 }
 
 
-
+## TODO: clarify label on horiz axis
 Mrdiag <- function(RE, data, id = "Midx", col = rainbow(nrow(RE))){
     if(missing(RE) || missing(data)) stop("Must specify RE and data")
     par.orig <- par(no.readonly = TRUE)
@@ -319,15 +319,16 @@ Mrdiag <- function(RE, data, id = "Midx", col = rainbow(nrow(RE))){
     par(mfrow = c( RE.ncol - 1, 2)) ##ignore intercept
 
     for (i in 2:RE.ncol){
-        plot(RE[, 1], RE[ , REnam[i]], xlab = paste("Random Effect on: ", id),
+        xlab <- if(REnam[1] == "x0") "Intercept Random Effect" else paste ("Slope Random Effect on", REnam[1])
+        plot(RE[, 1], RE[ , REnam[i]], xlab = xlab,
              ylab = paste("Random Effect on: ", REnam[i], sep=""),
              main = "True Random Effects", col = col)
 
 
         plot(RE[ , 1][dat$Midx], data[ , REnam[i]] * RE[ , REnam[i]][data[, id]],
-             col = col[data[ ,id]], main = "Marginal Random Effects",
-             xlab = paste("Random Effect on: ", id),
-             ylab = paste("Marginal Slope Random Effect (b*", REnam[i], ")", sep=""))
+             col = col[data[ ,id]], main = "Realized Random Effects",
+             xlab = xlab,
+             ylab = paste("Marginal Effect (b*", REnam[i], ")", sep=""))
     }
     par(par.orig)
     require(rockchalk)
@@ -388,7 +389,8 @@ analyzeMLMData <- function(dat, id){
 ###############################
 ### "Demonstration starts here!"
 ###############################
-
+library(MASS)
+library(lattice)
 library(rockchalk) ## for summarize
 library(lme4) ## for lmer and lmList
 
@@ -423,6 +425,7 @@ reffects <- gd$reffects
 
 ## Inspect the "true random effects"
 dotplot(reffects) ## uses dotplot.ranef.mer from lme4
+
 Mrdiag(reffects[[1]], dat)
 
 
@@ -440,10 +443,14 @@ m3list.newdat <- spaghettiPlot.lmList(m3list,  iv="x1", cluster = "Midx",  dat =
 
 
 ## Run the following a few times, changing M and Nmin
-gd2 = genMLMData(M=50, Nmin = 20, Nvar = 0, Xmeans = c(10, 20, 100),
+gd2 = genMLMData(M = 50, Nmin = 20, Nvar = 0, Xmeans = c(10, 20, 100),
               Xcorr = Xcorr, beta = beta,
               STDEE = 159, STDEb = STDEb, bcorr = bcorr)
-Mrdiag(gd2$reffects[[1]], data=gd2$dat)
+##
+dat <- gd2$dat
+reffects <- gd2$reffects
+
+Mrdiag(gd2$reffects[[1]], data = gd2$dat)
 
 
 
