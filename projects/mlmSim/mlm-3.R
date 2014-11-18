@@ -320,8 +320,11 @@ Mrdiag <- function(RE, data, id = "Midx", col = rainbow(nrow(RE))){
 
     for (i in 2:RE.ncol){
         xlab <- if(REnam[1] == "x0") "Intercept Random Effect" else paste ("Slope Random Effect on", REnam[1])
-        plot(RE[, 1], RE[ , REnam[i]], xlab = xlab,
-             ylab = paste("Random Effect on: ", REnam[i], sep=""),
+        ylab <- substitute("Random Effect:" ~ ~b[NAME], list(NAME = REnam[i]))
+        plot(RE[, 1], RE[ , REnam[i]],
+             xlab = xlab,
+             ##ylab = paste("Random Effect on: ", REnam[i], sep=""),
+             ylab = ylab, 
              main = "True Random Effects", col = col)
 
 
@@ -616,6 +619,8 @@ cor(mm4ranef$Midx)
 
 dotplot(mm4ranef)
 
+
+## FIXME: where did m3newdat go?
 
 m3newdat$mm4pred <- predict(mm4, newdata = m3newdat)
 
