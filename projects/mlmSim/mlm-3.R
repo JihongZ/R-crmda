@@ -444,6 +444,18 @@ m3list <- lmList(y3 ~ x1 + x2 + x3 | Midx, data=dat, pool = FALSE)
 ## Plot those. Fun!
 m3list.newdat <- spaghettiPlot.lmList(m3list,  iv="x1", cluster = "Midx",  dat = dat, col = mycolors)
 
+## Run the following a few times, changing M and Nmin
+gd2 = genMLMData(M = 5, Nmin = 10, Nvar = 0, Xmeans = c(10, 20, 100),
+              Xcorr = Xcorr, beta = beta,
+              STDEE = 159, STDEb = STDEb, bcorr = bcorr)
+##
+dat <- gd2$dat
+reffects <- gd2$reffects
+
+Mrdiag(gd2$reffects[[1]], data = gd2$dat)
+
+
+
 
 ## Run the following a few times, changing M and Nmin
 gd2 = genMLMData(M = 50, Nmin = 20, Nvar = 0, Xmeans = c(10, 20, 100),
