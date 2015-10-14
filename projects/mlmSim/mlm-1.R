@@ -251,8 +251,9 @@ mm4VarCorr
 mm4reStdDev <- c(lapply(mm4VarCorr, attr, "stddev"), list(Residual = attr(mm4VarCorr, "sc")))
 mm4reStdDev
 
-mm4ranef <- ranef(mm4, postVar = TRUE) ## a ranef.mer object, appears to be a list that includes one data frame
+mm4ranef <- ranef(mm4, condVar = TRUE) ## a ranef.mer object, appears to be a list that includes one data frame
 
+library(lattice)
 ## Here's a fun one.
 dotplot(mm4ranef)
 
