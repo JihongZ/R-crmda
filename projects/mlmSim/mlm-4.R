@@ -1,3 +1,12 @@
+## Paul Johnson
+## 2015-10-15
+
+## In 2014, I wrote a lecture for MLM and re-invented
+## the wheel.  This is a little different because
+## it allows the sub groups to have different means
+## and standard deviations for X.
+
+
 pdf.options(onefile=F,family="Times",pointsize=10)
 
 set.seed(234234)
