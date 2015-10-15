@@ -1,28 +1,23 @@
 ## Paul Johnson <pauljohn@ku.edu>
 ## 2012-06-24
 
-## mlm-2. This is step 2 in the journey
+## mlm-2.
 
 ## Topic: create multi-level data and use regression and lmer to
 ## estimate it.  This creates 3 different dependent variables,
-## y1: ordinary "homoskedastic" regression (no grouping effect0
+## y1: ordinary "homoskedastic" regression (no grouping effect)
 ## y2: clustered "random intercepts"
 ## y3: clustered "random intercepts" and "random slope" for 1 predictor (x1)
 
-## Change 1. I demonstrated mlm-1.R for James Selig, who suggested
-## it was important to have clusters made up of various numbers of
-## observations (unbalanced groups). Now there are M groups, but
-## the variable N becomes a vector that represents the number of
-## respondents in each cluster.
+## There are M clusters of various sizes, determined by
+## Mmin + poisson(lambda). Hence, unbalanced groups. 
 
-## Change 2. Do better book keeping on the random effects.  Now the
-## random effects are drawn from a multivariate normal, allowing
+## The random effects are drawn from a multivariate normal, allowing
 ## correlation between them. The random effects matrix is called
 ## Mreffects, its columns are (b0, b1), representing the intercept and
-## slope random effects.  In my opinion, it is easier to specify the
-## parameters with standard deviations and correlations.  The Covar
-## matrix of the random effects "Msigma" is built up from those
-## parameters.
+## slope random effects. The user specifies the means, standard
+## deviations, and correlations, and the Covar matrix of the random
+## effects "Msigma" is built up:
 
 ##          | STDEb0  0   | |1  Mrho   | | STDEb0  0   |
 ## Msigma = |             |X|          |X|             |
@@ -31,27 +26,27 @@
 library(MASS) ## for rmvnorm
 set.seed(1234) ## for replicability
 
-M <- 100  ## Clusters
-## For equal-sized clusters with 10 observations, do this
-## N <- rep(10, M)
-## There are many ways to get varying cluster sizes.
-##
-N <- 134 + rpois(M, lambda=20)
-## I add 4 because a cluster with fewer than 4 observations
-## will cause a regression on the separate cluster to fail
+## Clusters
+M <- 100
+## Minimum per cluster
+Mmin <- 134
+## Variance in number of members per cluster
+Mvar <- 20
+N <- Mmin + rpois(M, lambda = Mvar)
+## 
 
 ## get M unique gray colors, will use later for plotting
-## mycolors <- gray.colors(M)
+## Mcolors <- gray.colors(M)
 
-## More colorful mycolors ?
-mycolors <- rainbow(M)
+## Need more pizzaz in colors?
+Mcolors <- rainbow(M)
 
 
 ## Create Mind and Iind indexes for book keeping.
 ## Mind, "M index" shows with which cluster an observation belongs.
-Mind <- unlist(lapply(1:M, function(x) rep(x, each=N[x])))
+Mind <- unlist(lapply(1:M, function(x) rep(x, each = N[x])))
 ## Iind, "I index" indexes cluster members.
-Iind <- unlist(lapply(1:M, function(x) seq(1, N[x], by=1)))
+Iind <- unlist(lapply(1:M, function(x) seq(1, N[x], by = 1)))
 
 ##Create 3 variables from a multivariate Normal with these
 ## characteristics
@@ -69,22 +64,17 @@ if(!isSymmetric(Xcorr.mat))stop("Xcorr.mat is not symmetric")
 Xsigma <- diag(Xsds) %*% Xcorr.mat %*% diag(Xsds)
 X.mat <- mvrnorm(n = sum(N), mu = Xmeans, Sigma = Xsigma)
 dimnames(X.mat)[[2]] <- c("x1", "x2", "x3")
-## Don't forget to insert an intercept later
-X.mat <- cbind(X.mat)
-
-
-
 
 ## The true fixed effects of b0, b1, b2, b3 in
 ## y = b0 + b1*x1 + b2*x2 + b3*x3
-bslopes <- c(1.5, 0.25, -0.2, 0.05)
+beta <- c(1.5, 0.25, -0.2, 0.05)
 
 ## Standard deviation of error term at individual level
-STDE <- 15
+STDE <- 25
 
 ## Create a dependent variable that has no clustering effects.
 ##     FIXED Part                 +  RANDOM PART
-y1 <- cbind(1, X.mat) %*% bslopes + rnorm(sum(N), m = 0, s = STDE)
+y1 <- cbind(1, X.mat) %*% beta + rnorm(sum(N), m = 0, s = STDE)
 dat <- cbind(data.frame(Mind, Iind, y1), as.data.frame(X.mat))
 rownames(dat) <- paste(dat$Mind, dat$Iind, sep=".") ##may help bookkeeping later
 rm(Mind, Iind, y1, X.mat) ## cleanup workspace
@@ -99,13 +89,13 @@ summary(lm(y1 ~ x1 + x2 + x3, data=dat))$r.square
 ## STDEb0: standard deviation of clustered intercepts.
 STDEb0 <- 0.5
 ## STDEb1: standard deviation of slopes across cluster units
-STDEb1 <- 0.05
+STDEb1 <- 0.25
 Mrho <- 0.2
 ## I'm tempted to get fancy here with a matrix for STDEb0, STDEb1, and
 ## Mrho. It would pay off, I expect. But be harder to teach.
 Msigma <- diag(c(STDEb0, STDEb1)) %*% matrix(c(1, Mrho, Mrho, 1), 2, 2) %*% diag(c(STDEb0, STDEb1))
 Mreffects <- mvrnorm(M, mu = c(0, 0), Sigma = Msigma)
-colnames(Mreffects) <- c("b0","b1")
+colnames(Mreffects) <- c("b0", "b1")
 
 ## In y2, include random intercept
 dat$y2 <- dat$y1 + Mreffects[ ,"b0"][dat$Mind]
@@ -121,7 +111,10 @@ summary(Mreffects)
 apply(Mreffects, 2, sd)
 cor(Mreffects)
 
-plot(Mreffects[ ,"b0"][dat$Mind], dat$x1 * Mreffects[ ,"b1"][dat$Mind], col=dat$Mind, main = "Random Slopes and Intercepts", xlab="Intercept Random Effect (b0)", ylab="Slope Random Effect (b1*x)")
+plot(Mreffects[ ,"b0"][dat$Mind], dat$x1 * Mreffects[ ,"b1"][dat$Mind], col=dat$Mind,
+     main = "Random Slopes and Intercepts",
+     xlab = "Intercept Random Effect (b0)",
+     ylab = "Slope Random Effect (b1*x)")
 
 ## The "grand" regression?
 m1 <- lm(y3 ~ x1 + x2 + x3, data=dat)
@@ -134,16 +127,16 @@ summary(m2)
 
 library(lme4)
 ## M separate regressions, with 3 predictors
-m3list <- lmList(y3 ~ x1 + x2 + x3 | Mind, data=dat, pool = FALSE)
+m3list <- lmList(y3 ~ x1 + x2 + x3 | Mind, data = dat, pool = FALSE)
 
 ## Predicted values set x2 and x3 at their cluster-specific means.
 
-plot(y3 ~ x1, data=dat, col=mycolors[Mind], lwd = 0.6, main = "lm on clusters")
+plot(y3 ~ x1, data = dat, col = Mcolors[Mind], lwd = 0.6, main = "lm on Separate Clusters")
 for( i in seq_along(m3list)){
     m3mf <- model.frame(m3list[[i]]) #data set for group i
     x1range <- range(m3mf$x1) ## use group-specific ranges this time
     pgroup <- predict( m3list[[i]], newdata = data.frame(x1=x1range, x2=mean(m3mf$x2), x3=mean(m3mf$x3)))
-    lines(x1range, pgroup, col=mycolors[i])
+    lines(x1range, pgroup, col=Mcolors[i])
 }
 
 ## If a cluster has 3 or fewer cases, this warning will appear
@@ -152,16 +145,15 @@ for( i in seq_along(m3list)){
 ##   prediction from a rank-deficient fit may be misleading
 
 
-## Keep a record.
+## Keep a record of that, will predict other models onto same data
 m3newdat <- lapply(m3list, function(x) {
     m3mf <- model.frame(x)
-    ndf = data.frame(x1=range(m3mf$x1), x2=mean(m3mf$x2), x3=mean(m3mf$x3))
+    ndf = data.frame(x1 = range(m3mf$x1), x2 = mean(m3mf$x2), x3 = mean(m3mf$x3))
     ndf$m3pred <- predict(x, newdata = ndf)
     ndf} )
 m3newdat <- do.call("rbind", m3newdat)
-## Better add a variable Mind. This way seems like overkill, but probably is more
-## robust than rep(1:M, each=2). It capitalizes on row names
-m3newdat$Mind <-  as.integer(do.call("rbind", strsplit(row.names(m3newdat), split="\\.", perl=T))[ ,1])
+## Recover the Mind value by butchering the row names
+m3newdat$Mind <-  as.integer(gsub("\\.[0-9].*", "", row.names(m3newdat)))
 
 ## Draw new graphs on a new device, so we can compare
 dev.new()
@@ -171,7 +163,7 @@ dev.new()
 ## Estimate this as a mixed-effects model with lme4
 
 ## mm2: Just the random intercept, no random slope
-mm2 <- lmer( y2 ~ x1 + x2 + x3 + (1 | Mind), data=dat)
+mm2 <- lmer(y2 ~ x1 + x2 + x3 + (1 | Mind), data=dat)
 summary(mm2)
 mm2VarCorr <- VarCorr(mm2)
 mm2VarCorr
@@ -181,6 +173,27 @@ cor(fitted(mm2), dat$y2)
 ## Both random intercept and random slope, not correlated with each other
 ## Depending on Mrho, this may be a 'wrong model'.
 mm3 <- lmer( y3 ~ x1 + x2 + x3 + (1|Mind) + (0 + x1 | Mind), data=dat, verbose=3)
+
+## That produces a non-convergent model.
+## At return
+## eval: 479 fn:      153252.65 par: 0.0237800 0.00122944
+## Warning messages:
+## 1: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+##   Model failed to converge with max|grad| = 1.54298 (tol = 0.002, component 1)
+## 2: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+##   Model is nearly unidentifiable: very large eigenvalue
+##  - Rescale variables?
+
+
+dat[ , c("x1s", "x2s", "x3s")] <- lapply(dat[, c("x1", "x2", "x3")], scale)
+dat$y3s <- scale(dat$y3) 
+mm3 <- lmer( y3s ~ x1s + x2s + x3s + (1 | Mind) + (0 + x1 | Mind),
+            data=dat, verbose = 3)
+
+## That converged in lme4_1.1-9, but not lme4_1.1-10
+
+sessionInfo()
+
 summary(mm3)
 mm3VarCorr <- VarCorr(mm3)
 mm3VarCorr
@@ -199,54 +212,59 @@ mm3reStdDev[["Mind"]]["(Intercept)"] - STDEb0
 ## Can't figure how to get STD(b1)
 mm3reStdDev[["Residual"]] - STDE
 
+
 ## The "right" model allows the random effects to be correlated (Supposing
 ## Mrho not 0).
-mm4 <- lmer( y3 ~ x1 + x2 + x3 + (x1 | Mind), data=dat)
+mm4 <- lmer( y3s ~ x1s + x2s + x3s + (x1s | Mind), data = dat)
 summary(mm4)
 mm4VarCorr <- VarCorr(mm4)
 mm4VarCorr
 
 cor(fitted(mm4), dat$y3)
 
-plot(fitted(mm4), dat$y3, col=dat$Mind)
+plot(dat$y3,fitted(mm4), col=dat$Mind, xlab = "Observed y3", ylab = "lmer Predicted" )
 
 
 
-## Yank out the standard deviation estimates
+## Here is a way you can take the standard deviation estimates
 mm4reStdDev <- c(lapply(mm4VarCorr, attr, "stddev"), list(Residual = attr(mm4VarCorr, "sc")))
 mm4reStdDev
 
 
 ## Ever do summary stats on the predicted random effects?
-mm4ranef <- ranef(mm4, postVar = TRUE) ## a ranef.mer object,  a list that includes one data frame
-apply(mm4ranef[["Mind"]], 2, mean)
-apply(mm4ranef[["Mind"]], 2, sd)
+mm4ranef <- ranef(mm4, condVar = TRUE) ## a ranef.mer object,  a list that includes one data frame
+## Check the mean and sd of the predicted random effects
 summarize(mm4ranef$Mind)
+## Note high correlation between estimated intercepts and slope effects
 cor(mm4ranef$Mind)
 
+library(lattice)
 dotplot(mm4ranef)
 
 m3newdat$mm4pred <- predict(mm4, newdata = m3newdat)
 
-plot(y3 ~ x1, data=dat, col=mycolors[Mind], main="lmer mixed model predictions")
-by(m3newdat, m3newdat$Mind, function(x) { lines(x$x1, x$mm4pred, col=mycolors[x$Mind])})
+plot(y3 ~ x1, data = dat, col = Mcolors[Mind], main = "lmer mixed model predictions")
+by(m3newdat, m3newdat$Mind, function(x) {lines(x$x1, x$mm4pred, col=Mcolors[x$Mind])})
 
-
-## Double-check prediction values
-mm4b <- fixef(mm4) ## coef(summary(mm4))[ ,1]
+## In 2012, there was no predict method for lmer, so we calculated predicted
+## values the old fashioned way. 
+## 
+mm4b <- fixef(mm4) ## compare to coef(mm4) or coef(summary(mm4))[ ,1]
 mm4vnames <- names(mm4b)
 ##  b0 + raneff(intercept, j)
 mm4inteffect <- mm4b["(Intercept)"] +  mm4ranef[[1]][m3newdat$Mind, 1]
-mm4x1effect <- m3newdat[ , c("x1")] * (mm4b["x1"] + mm4ranef[[1]][m3newdat$Mind, 2] )
+mm4x1effect <-  m3newdat[ , c("x1")] * (mm4b["x1"] + mm4ranef[[1]][m3newdat$Mind, 2] )
+
 mm4mmpred2 <- mm4inteffect + mm4x1effect +  as.matrix(m3newdat[ ,c("x2","x3") ]) %*%  mm4b[c("x2","x3")]
 m3newdat$mm4manualpred <-  mm4inteffect + mm4x1effect +  as.matrix(m3newdat[ ,c("x2","x3") ]) %*%  mm4b[c("x2","x3")]
 
 cbind(m3newdat$mm4manualpred, m3newdat$mm4pred)
 
 ## OK, looks good
-plot(y3 ~ x1, data=dat, col=mycolors[Mind], main="lmer mixed model predictions")
-by(m3newdat, m3newdat$Mind, function(x) { lines(x$x1, x$mm4manualpred, col=mycolors[x$Mind])})
+plot(y3 ~ x1, data=dat, col=Mcolors[Mind], main="lmer mixed model predictions")
+by(m3newdat, m3newdat$Mind, function(x) { lines(x$x1, x$mm4manualpred, col=Mcolors[x$Mind])})
 
+by(m3newdat, m3newdat$Mind, function(x) { lines(x$x1, x$gg, col=Mcolors[x$Mind])})
 
 
 
@@ -301,15 +319,15 @@ par(op)
 
 
 ## Plot the estimated slopes against the "true" random effects from Mreffects
-plot(bslopes[2] + Mreffects[ ,2], m3x1b, xlab="Cluster Slopes (True Values)", ylab="Estimates of Slopes (across Clusters)", col="gray70", xlim= c(1.04,1.04)*range(c(bslopes[2] + Mreffects[ ,2], m3x1b)), ylim=c(1.04,1.04)*range((c(bslopes[2] + Mreffects[ ,2], m3x1b))))
-points(bslopes[2] + Mreffects[ ,2], mm4x1b, , col="black", pch=13)
+plot(beta[2] + Mreffects[ ,2], m3x1b, xlab="Cluster Slopes (True Values)", ylab="Estimates of Slopes (across Clusters)", col="gray70", xlim= c(1.04,1.04)*range(c(beta[2] + Mreffects[ ,2], m3x1b)), ylim=c(1.04,1.04)*range((c(beta[2] + Mreffects[ ,2], m3x1b))))
+points(beta[2] + Mreffects[ ,2], mm4x1b, , col="black", pch=13)
 legend("topleft", c("OLS Slopes", "Mixed Model Slopes"), pch=c(1,13), col=c("gray70","black"))
 
 
 
 ## Plot the estimated intercept effects against the "true" random effects from Mreffects
-plot(bslopes[1] + Mreffects[ ,1], m3b0, xlab="Cluster Intercepts (True Values)", ylab="Estimates of Intercepts", col="gray70")
-points(bslopes[1] + Mreffects[ ,1], mm4b0 , col="black", pch=13)
+plot(beta[1] + Mreffects[ ,1], m3b0, xlab="Cluster Intercepts (True Values)", ylab="Estimates of Intercepts", col="gray70")
+points(beta[1] + Mreffects[ ,1], mm4b0 , col="black", pch=13)
 legend("topleft", c("OLS Intercepts", "Mixed Model Intercepts"), pch=c(1,13), col=c("gray70","black"))
 
 
