@@ -62,8 +62,10 @@ bslopes <- c(0.2, 15.4, -0.2, 3)
 
 ## Mind, an "indicator" that says with which cluster an observation belongs.
 Mind <- 1:M %x% rep(1,N)
+
 ## Iind, "I index" indexes cluster members.
-Iind <- unlist(lapply(1:M, function(x) seq(1, N, by=1)))
+Iind <- unlist(lapply(rep(N, M), function(x) seq(1, x, by = 1)))
+
 
 Xmeans <- c(100, 200, 150)
 Xsds <- c(10, 20, 30)
