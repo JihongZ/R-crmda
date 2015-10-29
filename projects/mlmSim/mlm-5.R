@@ -212,7 +212,7 @@ plotLines <- function(fmla, data = NULL, ynoe = TRUE, y = FALSE,
 ##' 
 ##' @param data 
 ##' @param trueb 
-##' @return 
+##' @return this creates plots. 
 ##' @author Paul Johnson
 plotSim <- function(fmla, data = NULL) {
     plotLines(fmla, data, y = TRUE, ynoe = FALSE, trueb = FALSE,
