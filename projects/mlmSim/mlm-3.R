@@ -1,5 +1,5 @@
 ## Paul Johnson <pauljohn@ku.edu>
-## 2012-08-26
+## 2016-06-07
 
 ## mlm-3. This is step 3 the my R programming tutorial. I'm building
 ## up to a simulation of a lot of datasets and multi-level models.
@@ -53,8 +53,6 @@
 ## We need to create more columns of Xs, we need to decide how they are
 ## correlated with each other and whether their effects are linked to cluster
 ## membership.
-
-
 
 
 ## vech2Corr is a convenience function for creating correlation matrices
@@ -139,21 +137,30 @@ vech2Corr <- function(vech){
 ##' columns. If a vector with the "right number" of values is supplied
 ##' to fill up the strictly lower triangle of a matrix, (commonly
 ##' called a vech), then the matrix will be constructed from it.
-
 ##' @param STDEE standard deviation of the error term
 ##' @param STDEb standard deviation of random effects--perturbations
-##' applied to b's within the clusters
-##' @param bcorr Correlation among random effects. If not specified, all random effects are uncorrelated. If a single value is specified, that is assumed to be the common correlation among all columns. The user may also supply a symmetric matrix of correlation values or a vech, a vector of values to fill in the strictly lower triangle of the bcorr matrix.
-##' @param seed  Random generator starting point. If omitted, current R seed is used.
-##' @return A list with:
-##' 1. dat: a data frame with columns
-##' Midx(cluster indicator), Iidx (individual indicator within cluster),
-##' X columns,  MVN predictors
-##' y1: ordinary "homoskedastic" regression (no grouping effect)
-##' y2: Includes clustered "random intercepts"
-##' y3: Includes "random intercepts" and "random slope" for 1 predictor (x1)
-##' y4: Includes all random effects for all columns of X
-##' 2. reffects. A list of random effects data frames. One random effect for the intercept (additive random effect within the clusters), plus one for each column of the predictor matrix, is supplied. This is declared as an object of type "ranef.mer" so that plotting functions from lme4 will work treat it as if it is random effects that were estimated.
+##'     applied to b's within the clusters
+##' @param bcorr Correlation among random effects. If not specified,
+##'     all random effects are uncorrelated. If a single value is
+##'     specified, that is assumed to be the common correlation among
+##'     all columns. The user may also supply a symmetric matrix of
+##'     correlation values or a vech, a vector of values to fill in
+##'     the strictly lower triangle of the bcorr matrix.
+##' @param seed Random generator starting point. If omitted, current R
+##'     seed is used.
+##' @return A list with: 1. dat: a data frame with columns
+##'     Midx(cluster indicator), Iidx (individual indicator within
+##'     cluster), X columns, MVN predictors y1: ordinary
+##'     "homoskedastic" regression (no grouping effect) y2: Includes
+##'     clustered "random intercepts" y3: Includes "random intercepts"
+##'     and "random slope" for 1 predictor (x1) y4: Includes all
+##'     random effects for all columns of X 2. reffects. A list of
+##'     random effects data frames. One random effect for the
+##'     intercept (additive random effect within the clusters), plus
+##'     one for each column of the predictor matrix, is supplied. This
+##'     is declared as an object of type "ranef.mer" so that plotting
+##'     functions from lme4 will work treat it as if it is random
+##'     effects that were estimated.
 ##' @author Paul Johnson <pauljohn@@ku.edu>
 genMLMData <- function(M = 100, Nmin = 20, Nvar = 5,
                        beta,
@@ -269,69 +276,129 @@ genMLMData <- function(M = 100, Nmin = 20, Nvar = 5,
 ##' lines for each cluster of observations are color-coded.
 ##'
 ##' @param regs An lmList object, including one regression for each
-##' subgroup of observations
+##'     subgroup of observations
 ##' @param data The full data frame from which the regressions are
-##' estimated.
+##'     estimated.
 ##' @param iv The name of the variable that is to be used on the X
-##' axis in plots.
-##' @param cluster The name of the variable that designates the
-##' clusters in data
+##'     axis in plots.
+##' @param grp The name of the variable that designates the clusters
+##'     in data ("group")
 ##' @param col An optional color vector. The default uses the rainbow
-##' function to asisgn colors
+##'     function to asisgn colors
+##' @param pause This is not currently working. "no" or "one" are
+##'     acceptable, "layers" is broken. When this works, user will
+##'     choose one c("no", "one", "layers"). "no" means draw all
+##'     groups at once. "one" means draw one at a time. "layers" means
+##'     stack group displays on top of each other.
 ##' @return The "newdata" objects that are used to calculate predicted
-##' values in each separate sub-unit regression
+##'     values in each separate sub-unit regression
 ##' @author Paul Johnson <pauljohn@@ku.edu>
-spaghettiPlot.lmList <- function(regs, data, iv, cluster = "Midx", col
-= rainbow(length(regs))){
-    ## argument check
-    stopifnot(class(regs) == "lmList")
-    dv <- as.character(formula(terms(regs[[1]]))[[2]]) ## get dv name
+spaghettiPlot.lmList4 <- function(regs, data, iv, grp = "Midx",
+                                  col = rainbow(length(regs)),
+                                  pause = "no")
+{
+    par.orig <- par(no.readonly = TRUE)
+
+    stopifnot(class(regs) == "lmList4")
+    dv <- as.character(formula(regs[[1]])[[2]])
+        ##as.character(formula(terms(regs[[1]]))[[2]]) ## get dv name
     if (sum(!c(dv, iv) %in% colnames(data)) > 0) stop("dv and iv must be column names in data")
-    plot(data[, dv] ~ data[ , iv], col = col[data[ ,cluster]], lwd = 0.6, main = "Regression Within Clusters", xlab = iv, ylab = dv )
-    newdat <- vector("list", length(regs))
-    for( i in seq_along(regs) ){
-        imod <- regs[[i]]
-        imf <- model.frame(imod) #data set for cluster i
-        ivrange <- range(imf[, iv]) ## use cluster-specific ranges this time
-        newdf <- data.frame( iv = ivrange, lapply(imf[ , -which(colnames(imf) %in% c(dv,iv))], mean, na.rm = TRUE))
+
+    if (length(col) < length(regs)) col <- rep(col, length.out = length(regs))
+    
+    nd <- function(imod){
+        imf <- model.frame(imod) #data set for grp i
+        ivrange <- range(imf[, iv]) ## use grp-specific ranges this time
+        newdf <- data.frame(iv = ivrange,
+                            lapply(imf[ , -which(colnames(imf) %in% c(dv,iv))],
+                                   mean, na.rm = TRUE))
         colnames(newdf)[1] <- iv  ##pita!
-        newdf$pred <- predict( imod, newdata = newdf)
-        lines(ivrange, newdf$pred, col = col[i])
-        newdf$Midx <- i
-        newdat[[i]] <- newdf
+        newdf$pred <- predict(imod, newdata = newdf)
+        newdf
+    }
+    newdat <- lapply(regs, nd)
+    for(i in names(newdat)) {
+        newdat[[i]][ , grp] <- i
+        }
+    ## pause disregarded, does not work as of 2016-06-07
+    ## if (pause %in% c("one", "layers")){
+    ##     for(i in seq_along(regs)){
+    ##         j <- i
+    ##         ##for(j in 1:i){
+    ##         ## http://stackoverflow.com/questions/15272916/how-to-wait-for-a-keypress-in-r
+    ##         invisible(readline(prompt = "Press [enter] for next group"))
+    ##         if (pause == "one") plot(formula(paste(dv, " ~", iv)), data = data, type = "n", lwd = 0.6,
+    ##                main = "Regression Within Ids", xlab = iv, ylab = dv)
+    ##         dat <- data[data[ , grp] %in% names(regs)[j], ]
+    ##         points(formula(paste(dv, "~", iv)), dat = dat, lwd = 0.6, col = col[j])
+    ##         print(paste("i = ", i, "j = ", j, "col = ", col[j], "\n"))
+    ##         print(newdat[[j]])
+    ##         lines(as.formula(paste("pred ~", iv)), data = newdat[[j]], col = col[j])
+    ##     }
+    ## }
+    
+    plotme <- parse(text = "plot(formula(paste(dv, \" ~\", iv)), data = data,  col = col[data[ ,grp]], lwd = 0.6,
+         main = \"Regression Within Ids\", xlab = iv, ylab = dv )")
+    eval(plotme)
+    for(i in seq_along(regs)){
+        lines(formula(paste("pred ~",  iv)), data = newdat[[i]], col = col[i])
     }
     newdata <- do.call("rbind", newdat)
+    par(par.orig)
     invisible(newdata)
 }
 
 
-## TODO: clarify label on horiz axis
-Mrdiag <- function(RE, data, id = "Midx", col = rainbow(nrow(RE))){
-    if(missing(RE) || missing(data)) stop("Must specify RE and data")
-    par.orig <- par(no.readonly = TRUE)
-
+##' Graphic Displays of lme4 Random Effects 
+##'
+##' Draws dot plots to illustrate importance of magnitude in random effects
+##' @param RE  An object produced by ranef()
+##' @param data Data set upon which model was estimated
+##' @param slopes Character string for slope random effects for plotting
+##' @param intercept Character string for random intercepts
+##' @param id Character string for grouping id variable in the original data
+##' @param col Desired color vector (rainbow is default)
+##' @param mfrows Default TRUE, meaning ask to advance to next graph after 2 rows were displayed
+##' @return Summary data describing random effects.
+##' @author Paul Johnson
+Mrdiag <- function(RE,  data, slopes, intercept, id = "Midx", col = rainbow(nrow(RE)), mfrows = TRUE){
+    if (missing(RE) || missing(data)) stop("Must specify RE and data")
     RE <- zapsmall(RE, digits = 5)
-    ##purge columns that contain only one unique value
-    RE <- RE[ , which(lapply(apply(RE, 2,  unique), length) > 1)]
-    REnam <- colnames(RE)
-    RE.ncol <- length(REnam)
-    dev.new()
-    par(mfrow = c( RE.ncol - 1, 2)) ##ignore intercept
 
-    for (i in 2:RE.ncol){
-        xlab <- if(REnam[1] == "x0") "Intercept Random Effect" else paste ("Slope Random Effect on", REnam[1])
-        ylab <- substitute("Random Effect:" ~ ~b[NAME], list(NAME = REnam[i]))
-        plot(RE[, 1], RE[ , REnam[i]],
+    if (missing(intercept)) {
+        intercept <- colnames(RE)[1]
+    }
+    if (missing(slopes)) {
+        ##purge columns that contain only one unique value
+        RE <- RE[ , which(lapply(apply(RE, 2,  unique), length) > 1)]
+        slopes <- colnames(RE)[2:NCOL(RE)]
+    }
+    par.orig <- par(no.readonly = TRUE)
+    dev.new()
+    
+    if (length(slopes) > 1){
+        if (missing(mfrows)) {
+            mfrows <- min(length(slopes), 2)
+            if (mfrows > 2) par(ask = TRUE)
+        } else if (mfrows < 2) {
+            par(ask = TRUE)   
+        }
+        par(mfrow = c(mfrows, 2)) ##ignore intercept
+    }
+    
+    for (i in slopes){
+        xlab <- substitute(paste("Intercept Random Effect: ", b[0]))
+        ylab <- substitute("Random Effect:" ~ ~b[NAME], list(NAME = i))
+        x <- RE[, intercept]
+        plot(x, RE[ , i],
              xlab = xlab,
-             ##ylab = paste("Random Effect on: ", REnam[i], sep=""),
              ylab = ylab, 
              main = "True Random Effects", col = col)
-
-
-        plot(RE[ , 1][dat$Midx], data[ , REnam[i]] * RE[ , REnam[i]][data[, id]],
+        ylab <- substitute("Marginal Effect: " ~ ~b[NAME] * NAME, list(NAME = i)) 
+        plot(x[dat[ , id]], data[ , i] * RE[ , i][data[, id]],
              col = col[data[ ,id]], main = "Realized Random Effects",
              xlab = xlab,
-             ylab = paste("Marginal Effect (b*", REnam[i], ")", sep=""))
+             ylab = ylab)
     }
     par(par.orig)
     require(rockchalk)
@@ -347,7 +414,6 @@ analyzeMLMData <- function(dat, id){
     m1.3s <- summary(lm(y3 ~ x1 + x2 + x3, dat, model = FALSE))
     colnames(dat)[which(colnames(gd$dat)== id)] <- "index"
     m2.1s <- summary(lm(y3 ~ x1 + x2 + x3 + index, data=dat, model = FALSE))
-
 
     m3list <- lmList(y3 ~ x1 + x2 + x3 | index, data = dat, pool = FALSE)
 
@@ -406,54 +472,77 @@ Xcorr <- c(0.4, 0.3, 0.0) ## just the strictly lower triangle values
 ## The true fixed effect values of the regression intercept and slopes
 beta <- c(0.4, 0.3, -0.1, -1.1)
 
-STDEE <- 5
+STDEE <- 10
 ## Correlations among random effects for columns, first is intercept.
 STDEb <- rep(0, length(beta)) ##default random effects 0
-STDEb[1] <- 10 ## the cluster-level intercept random effect,
-STDEb[2] <- .705  ## x1 slope disturbance
+STDEb[1] <- 5 ## the cluster-level intercept random effect,
+STDEb[2] <- 0.705  ## x1 slope disturbance
 STDEb[3] <- 1.5 ##x2 disturbance
 ## Create a symmetric correlation matrix from the vech
 bcorr <- c(0.2, 0.2, 0, 0, 0, 0)
 
-M <- 4  ## number of clusters
-Nmin <- 1000 ## number of members in smallest cluster
+M <- 10  ## number of clusters
+Nmin <- 50 ## number of members in smallest cluster
 Nvar <- 0 ## variance in number of members of clusters
 
 
 gd <- genMLMData(M = M, Nmin = Nmin, Nvar = Nvar, beta = beta,
               Xmeans = Xmeans, Xsds = Xsds,  Xcorr = Xcorr,
-              STDEE = STDEE, STDEb = STDEb, bcorr = bcorr, seed = 441123)
-dat <- gd$dat
-reffects <- gd$reffects
+              STDEE = STDEE, STDEb = STDEb, bcorr = bcorr, seed = 44113)
 
 ## Inspect the "true random effects"
-dotplot(reffects) ## uses dotplot.ranef.mer from lme4
+dotplot(gd$reffects) ## uses dotplot.ranef.mer from lme4
 
-Mrdiag(reffects[[1]], dat)
+reffects.sum <- Mrdiag(reffects[[1]], data = gd$dat, mfrows = 2)
 
+
+lmer1 <- lmer(y2 ~ x1 + x2 + x3 + (1 | Midx), data = gd$dat
+summary(lmer1)
+
+lmer1.ranef <- ranef(lmer1)
+dotplot(lmer1.ranef)
+
+lmer2 <- lmer(y3 ~ x1 + (x1 | Midx), data = gd$dat)
+summary(lmer2)
+lmer2.ranef <- ranef(lmer2)
+dotplot(lmer2.ranef)
+
+plot(gd$reffects[["Midx"]][ , "x0"], lmer2.ranef[["Midx"]][ , "(Intercept)"], 
+     xlab = "True Random Effects", ylab = "Recovered from lmer")
+
+
+
+
+
+
+
+
+
+## Stop there, I've broken the rest of this for today
 
 
 ## get M unique
 ## mycolors <- gray.colors(M)
 ## More colorful mycolors ?
+
 mycolors <- rainbow(M)
 
 ## Fit separate linear models, one for each cluster
-m3list <- lmList(y3 ~ x1 + x2 + x3 | Midx, data=dat, pool = FALSE)
+m3list <- lmList(y3 ~ x1 + x2 + x3 | Midx, data = dat, pool = FALSE)
 
 ## Plot those. Fun!
-m3list.newdat <- spaghettiPlot.lmList(m3list,  iv="x1", cluster = "Midx",  dat = dat, col = mycolors)
-
+m3list.newdat <- spaghettiPlot.lmList4(m3list,  iv = "x1", grp = "Midx",  dat = dat, col = mycolors)
 ## Run the following a few times, changing M and Nmin
 gd2 = genMLMData(M = 5, Nmin = 10, Nvar = 0, Xmeans = c(10, 20, 100),
               Xcorr = Xcorr, beta = beta,
               STDEE = 159, STDEb = STDEb, bcorr = bcorr)
-##
+## Extract the data as "dat" and "reffects" as welll (why?)
 dat <- gd2$dat
 reffects <- gd2$reffects
 
-Mrdiag(gd2$reffects[[1]], data = gd2$dat)
+##Mrdiag(gd2$reffects[[1]], data = gd2$dat, mfrows = 1)
 
+Mrdiag(gd2$reffects[[1]], data = gd2$dat, mfrows = 2)
 
 
 
@@ -486,24 +575,16 @@ Nmin <- 20
 Nvar <- 0 ## balanced data
 
 gd <- genMLMData(M = M, Nmin = Nmin, Nvar = Nvar, beta = beta,
-              Xmeans = c(10, 20, 100), Xcorr = Xcorr,
+              Xmeans = c(10, 20, 10), Xcorr = Xcorr,
               STDEE = 159, STDEb = STDEb, bcorr = bcorr, seed = 441123)
 dat <- gd$dat
-reffects <- gd$reffects
+## The "true" random effects are stored in there as "reffects
+
 
 m3list <- lmList(y3 ~ x1 + x2 + x3 | Midx, data=gd$dat, pool = FALSE)
+m3list.newdat <- spaghettiPlot.lmList4(m3list,  iv="x1", grp = "Midx",  dat = dat)
 
-m3list.newdat <- spaghettiPlot.lmList(m3list,  iv="x1", cluster = "Midx",  dat = dat)
 Mrdiag(gd$reffects[[1]], data=gd$dat)
-
-
-
-
-
-
-
-
-
 
 
 
@@ -551,6 +632,7 @@ m3list.newdat$m2.1 <-predict(m2.1, newdata = m3list.newdat)
 ## "correct" interaction included
 m2.2 <- lm(y3 ~  x2 + x3 + x1 * as.factor(Midx), data=dat)
 summary(m2.2) ## cool
+
 m3list.newdat$m2.2 <-predict(m2.2, newdata = m3list.newdat)
 
 ## The fixed effects "dummy variable" regression with interaction
@@ -572,10 +654,11 @@ dev.new()
 ## Estimate this as a mixed-effects model with lme4
 
 ## mm2: Just the random intercept, no random slope
-mm2 <- lmer( y2 ~ x1 + x2 + x3 + (1 | Midx), data=dat)
+mm2 <- lmer(y2 ~ x1 + x2 + x3 + (1 | Midx), data=dat)
 summary(mm2)
 m3list.newdat$mm2 <- predict(mm2, newdata = m3list.newdat)
 
+## One way to extract the standard deviations
 mm2VarCorr <- VarCorr(mm2)
 mm2VarCorr
 
@@ -583,7 +666,11 @@ cor(fitted(mm2), dat$y2)
 
 ## Both random intercept and random slope, not correlated with each other
 ## Depending on bcorr, this may be a 'wrong model'.
-mm3 <- lmer( y3 ~ x1 + x2 + x3 + (1|Midx) + (0 + x1 | Midx), data=dat, verbose=1)
+mm3 <- lmer(y3 ~ x1 + x2 + x3 + (1|Midx) + (0 + x1 | Midx), data=dat, verbose=0)
+summary(mm3)
+
+mm3 <- lmer(y3 ~ x1 + x2 + x3 + (x1 | Midx), data=dat, verbose=1)
+
 summary(mm3)
 mm3VarCorr <- VarCorr(mm3)
 mm3VarCorr
@@ -725,7 +812,4 @@ plot(reffects[, 1], m3b0)
 
 plot(reffects[, 1], mm4b0)
 
-
-
-lme4:::dotplot.ranef.mer
 
