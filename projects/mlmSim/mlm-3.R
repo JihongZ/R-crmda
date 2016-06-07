@@ -512,15 +512,6 @@ plot(gd$reffects[["Midx"]][ , "x0"], lmer2.ranef[["Midx"]][ , "(Intercept)"],
 
 
 
-
-
-
-
-
-
-## Stop there, I've broken the rest of this for today
-
-
 ## get M unique
 ## mycolors <- gray.colors(M)
 ## More colorful mycolors ?
@@ -532,6 +523,16 @@ m3list <- lmList(y3 ~ x1 + x2 + x3 | Midx, data = dat, pool = FALSE)
 
 ## Plot those. Fun!
 m3list.newdat <- spaghettiPlot.lmList4(m3list,  iv = "x1", grp = "Midx",  dat = dat, col = mycolors)
+
+
+
+
+
+
+
+## Stop there, I've broken the rest of this for today
+
+
 ## Run the following a few times, changing M and Nmin
 gd2 = genMLMData(M = 5, Nmin = 10, Nvar = 0, Xmeans = c(10, 20, 100),
               Xcorr = Xcorr, beta = beta,

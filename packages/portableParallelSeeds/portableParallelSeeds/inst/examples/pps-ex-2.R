@@ -9,7 +9,7 @@ A1 ## shows states of 3 generators for one run
 ## Prehaps this is a simpler, more elegant approach than in setSeeds.
 runOneSimulation <- function(streams, N, m, sd, beta = c(0.3, 0.2, 0.1))
 {
-    setSeedCollection(streams)
+    setSeedVector(streams)
     
     datX <- rockchalk::mvrnorm(N,
                                            mu = rep(m, 3),

@@ -1,5 +1,5 @@
-#LyX 2.0 created this file. For more info see http://www.lyx.org/
-\lyxformat 413
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
 \begin_document
 \begin_header
 \textclass scrartcl
@@ -100,13 +100,13 @@ foottoend
 \font_roman lmodern
 \font_sans lmss
 \font_typewriter lmtt
+\font_math auto
 \font_default_family default
 \use_non_tex_fonts false
 \font_sc false
 \font_osf false
 \font_sf_scale 100
 \font_tt_scale 100
-
 \graphics default
 \default_output_format default
 \output_sync 0
@@ -126,15 +126,24 @@ foottoend
 \pdf_pdfusetitle true
 \papersize default
 \use_geometry true
-\use_amsmath 1
-\use_esint 1
-\use_mhchem 0
-\use_mathdots 0
-\cite_engine natbib_authoryear
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 0
+\use_package mathtools 1
+\use_package mhchem 0
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine natbib
+\cite_engine_type authoryear
+\biblio_style plainnat
 \use_bibtopic false
 \use_indices false
 \paperorientation portrait
 \suppress_date false
+\justification true
 \use_refstyle 0
 \index Index
 \shortcut idx
@@ -190,24 +199,20 @@ many separate substreams
 \begin_inset Quotes erd
 \end_inset
 
- made possible by the CMRG random generator (as proposed by 
+ approach (as proposed by 
 \begin_inset CommandInset citation
 LatexCommand citealp
 key "lecuyer_object-oriented_2002"
 
 \end_inset
 
-), we first create a large collection of initial states for many random
- streams, and then make those streams available to simulation runs.
- The random number streams for each separate run of a simulation are thus
- properly initialized.
- The framework allows one to run a simulation in a single workstation (iterative
-ly) or on a cluster computer (parallel) and obtain the same results.
- It is also possible to select particular runs from a batch and re-start
- them for closer inspection.
- This approach allows for each separate run to depend on several separate
- streams of random numbers and it offers a method for changing among the
- random streams.
+), the package facilitates a two-step process.
+ First, one creates a collection of initial states for many random streams.
+ Second, elements of that collection are put to use in simulation runs.
+ These seed collections are portable (across computers).
+ One can re-start a simulation based on the seeds from a single run in a
+ larger collection or repeat exactly the entire batch in parallel.
+ This essay describes several example strategies for usage.
 \end_layout
 
 \begin_layout Standard
@@ -775,11 +780,11 @@ status open
 \align center
 \begin_inset Tabular
 <lyxtabular version="3" rows="5" columns="4">
-<features tabularvalignment="middle">
-<column alignment="center" valignment="top" width="0">
-<column alignment="center" valignment="top" width="0">
-<column alignment="center" valignment="top" width="0">
-<column alignment="center" valignment="top" width="0">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
 <row>
 <cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
 \begin_inset Text
@@ -981,7 +986,7 @@ stream 3
 \end_layout
 
 \begin_layout Plain Layout
-\begin_inset Caption
+\begin_inset Caption Standard
 
 \begin_layout Plain Layout
 \begin_inset CommandInset label
@@ -1137,7 +1142,7 @@ status open
 
 
 \backslash
-Rcode|setSeedCollection|
+Rcode|setSeedVector|
 \end_layout
 
 \end_inset
@@ -1151,7 +1156,7 @@ status open
 
 
 \backslash
-Rcode|setSeedCollection(projSeeds[i])|
+Rcode|setSeedVector(projSeeds[i])|
 \end_layout
 
 \end_inset
@@ -1479,9 +1484,8 @@ seeds
 \end_inset
 
 ) saved for run 787 in this example.
- We first check that the setSeeds() function can receive the
- collection of initializing information and re-generate the streams for
- run 787.
+ We first check that the setSeeds() function can receive the collection
+ of initializing information and re-generate the streams for run 787.
  
 \end_layout
 

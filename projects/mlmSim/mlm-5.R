@@ -241,7 +241,7 @@ library(rockchalk)
 M <- 10; beta0 <- 3; beta1 <- 0.5;
 
 simdata <- gen3(M = M, beta = c(beta0, beta1),
-                bsd = 20, xbarsd = 1, xsd = 20,
+                bsd = 10, xbarsd = 1, xsd = 20,
                 esd = 14, rhobxbar = 0.0)
 
 ## Uses dotplot.ranef.mer from lme4 & lattice

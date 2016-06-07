@@ -7,7 +7,7 @@
 ##' computations. This creates the seed object and, if the file
 ##' argument is specified, it writes the object on disk.
 ##'
-##'  Using the L'Ecuyer-CMRG random generator provided by the R
+##' Using the L'Ecuyer-CMRG random generator provided by the R
 ##' package parallel, this follows the strategy outlined in L'Ecuyer,
 ##' et. al (2002). The very very long random stream is subdivided into
 ##' smaller streams, thus allowing the creation of several separate

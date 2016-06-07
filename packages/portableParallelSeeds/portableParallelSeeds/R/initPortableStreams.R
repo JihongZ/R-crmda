@@ -218,27 +218,24 @@ setSeeds <- function(projSeeds, run, verbose = FALSE){
 NULL
 
 
-##' Sets a collection of initial states for separate random generator
+##' Sets initial states for separate random generator
 ##' streams into the .pps environment.
 ##'
 ##' The main argument is the collection of seeds that is in the proper
-##' format. It should be (one element from a "portableSeeds"
-##' object). The function sets the global environment variables
-##' .RandomSeed, currentStream, startStates, and currentStates.
+##' format. It should be a "row" of a "portableSeeds" array object.
+##' The currentStream argument determines which of these is set into
+##' the R environment variable .Random.seed.
 ##'
-##' As originally planned in this package, the suggested method of
-##' setting the seeds is the setSeeds function. That
-##' function receives a run number and a warehouse of seeds created by
-##' seedCreator. \code{setSeeds} will select the
-##' initializing states for the streams from the seed warehouse.
+##' This is different from \code{\link{setSeeds}} because setSeets accepts
+##' the whole parallelSeeds object as input, whereas this function
+##' wants only the input for one run of a simulation.
 ##'
-##' Some specific use cases, particuarly the replication of individual
-##' runs, may be faciliated by this function, which offers a way to
-##' set one seed collection into place.
+##' In some specific use cases, particuarly the replication of individual
+##' runs, it may be easier to use this function rather than setSeeds, but
+##' both achieve the same purpose.
 ##'
-##' @export setSeedCollection
-##' @param runSeeds Required. A list including seeds (vectors of
-##'     initializing values) for the L'Ecuyer-CMRG random generator
+##' @export setSeedVector
+##' @param runSeeds Required. Seeds for the L'Ecuyer-CMRG random generator
 ##' @param currentStream Optional. Integer indicating which of the
 ##'     streams is to be used first. Default = 1.
 ##' @param verbose Optional. Default = FALSE.
@@ -247,14 +244,10 @@ NULL
 ##'     startStates (list), currentStates (list), and currentStream
 ##'     (an integer).
 ##' @author Paul E. Johnson <pauljohn@@ku.edu>
-##' @seealso \code{setSeeds} performs the same service, but it does
-##'     the additional work of finding the correct element for a given
-##'     run within a seed collection; \code{seedCreator} to generate
-##'     the a seed collection; \code{useStream} to change from one
-##'     stream to another.
+##' @seealso \code{seedCreator}, \code{setSeeds}, and \code{useStream}.
 ##' @importFrom rockchalk mvrnorm
 ##' @example inst/examples/pps-ex-2.R
-setSeedCollection <- function(runSeeds, currentStream = 1L, verbose = FALSE){
+setSeedVector <- function(runSeeds, currentStream = 1L, verbose = FALSE){
     RNGkind("L'Ecuyer-CMRG")
 
     if (missing(runSeeds)) {
@@ -267,7 +260,7 @@ setSeedCollection <- function(runSeeds, currentStream = 1L, verbose = FALSE){
     assign("currentStream",  as.integer(currentStream), envir = .pps)
     assign("startStates", runSeeds, envir = .pps)
     assign("currentStates", runSeeds, envir = .pps)
-    assign(".Random.seed", runSeeds[[1L]],  envir = .pps)
+    assign(".Random.seed", runSeeds[[1L]],  envir = .GlobalEnv)
     if (verbose){
         print(paste("setStreamCollection"))
         print(.Random.seed)
