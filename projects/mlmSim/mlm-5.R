@@ -247,6 +247,7 @@ simdata <- gen3(M = M, beta = c(beta0, beta1),
 ## Uses dotplot.ranef.mer from lme4 & lattice
 
 dotplot(attr(simdata, "reffects"))
+title("The True Random Effects")
 
 ## What can plotLines do to visualize that?
 
@@ -266,8 +267,12 @@ plotLines(y ~ x, data = simdata, y = TRUE, ynoe = TRUE,
 plotLines(y ~ x, data = simdata, y = TRUE, ynoe = FALSE, 
           ols = TRUE, main = "Superimpose OLS Fit")
 
-plotLines(y ~ x, data = simdata, y = TRUE, ynoe = FALSE, ols = TRUE,
+pl6 <- plotLines(y ~ x, data = simdata, y = TRUE, ynoe = FALSE, ols = TRUE,
           mlm = TRUE, main = "MLM predictions for the Groups")
+## pl6 has the mlm fitted in side it
+summary(pl6$mlm)
+dotplot(ranef(pl6$mlm))
+
 
 
 ## I got tired of running those over and over, so boiled down
